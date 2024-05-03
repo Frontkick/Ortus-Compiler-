@@ -1,0 +1,3 @@
+/mnt/c/Users/91935/Desktop/MotherSucker/cmake-build-debug-wsl/CMakeFiles/ortus.dir
+/mnt/c/Users/91935/Desktop/MotherSucker/cmake-build-debug-wsl/CMakeFiles/edit_cache.dir
+/mnt/c/Users/91935/Desktop/MotherSucker/cmake-build-debug-wsl/CMakeFiles/rebuild_cache.dir

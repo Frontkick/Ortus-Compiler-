@@ -2,10 +2,12 @@
 
 #include <string>
 #include <vector>
+#include <optional>
+#include <iostream>
 
-enum class TokenType { exit, int_lit, semi, open_paren, close_paren, ident, set, eq, plus, star, sub, div, open_curl, close_culr};
+enum class TokenType { exit, int_lit, semi, open_paren, close_paren, ident, set, eq, plus, star, sub, div, open_curl, close_curl,if_,elif,else_};
 
-std::optional<int> bin_prec(TokenType type)
+inline std::optional<int> bin_prec(const TokenType type)
 {
     switch (type) {
         case TokenType::sub:
@@ -49,6 +51,20 @@ public:
                     tokens.push_back({ .type = TokenType::set });
                     buf.clear();
                 }
+                else if (buf == "if") {
+                    tokens.push_back({ .type = TokenType::if_ });
+                    buf.clear();
+                }
+                else if (buf == "elif")
+                {
+                    tokens.push_back({ .type = TokenType::elif });
+                    buf.clear();
+                }
+                else if (buf == "else")
+                {
+                    tokens.push_back({ .type = TokenType::else_ });
+                    buf.clear();
+                }
                 else {
                     tokens.push_back({ .type = TokenType::ident, .value = buf });
                     buf.clear();
@@ -62,6 +78,39 @@ public:
                 tokens.push_back({ .type = TokenType::int_lit, .value = buf });
                 buf.clear();
             }
+
+            else if (peek().value() == '!' && peek(1).has_value() && peek(1).value() == '!')
+            {
+                consume();
+                consume();
+                while (peek().has_value() && peek().value() !='\n')
+                {
+                    consume();
+                }
+            }
+
+            else if (peek().value() == '!' && peek(1).has_value() && peek(1).value() == '*')
+            {
+                consume();
+                consume();
+                while (peek().has_value())
+                {
+                    if(peek().value() =='*' && peek(1).has_value() && peek(1).value()=='!')
+                    {
+                        break;
+                    }
+                    consume();
+                }
+                if(peek().has_value())
+                {
+                    consume();
+                }
+                if(peek().has_value())
+                {
+                    consume();
+                }
+            }
+
             else if (peek().value() == '(') {
                 consume();
                 tokens.push_back({ .type = TokenType::open_paren });
@@ -100,7 +149,7 @@ public:
             }
             else if (peek().value() == '}') {
                 consume();
-                tokens.push_back({ .type = TokenType::close_culr});
+                tokens.push_back({ .type = TokenType::close_curl});
             }
             else if (std::isspace(peek().value())) {
                 consume();
@@ -115,17 +164,15 @@ public:
     }
 
 private:
-    [[nodiscard]] inline std::optional<char> peek(int offset = 0) const
+    [[nodiscard]] std::optional<char> peek(int offset = 0) const
     {
         if (m_index + offset >= m_src.length()) {
             return {};
         }
-        else {
             return m_src.at(m_index + offset);
-        }
     }
 
-    inline char consume()
+    char consume()
     {
         return m_src.at(m_index++);
     }

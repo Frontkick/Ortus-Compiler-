@@ -1,4 +1,14 @@
-set x = (100 - 2 * 3) / 2;
-set y = x + 5+1+5+8+7;
-set z = 22;
-exit(z);
+set y = (10-2*3)/2;
+set x=7;
+!! fuck you
+
+if (x) {
+    x=1;
+}
+elif (0) {
+    x=2;
+}
+else {
+    x=3;
+}
+exit(x);

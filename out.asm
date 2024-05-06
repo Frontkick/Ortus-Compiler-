@@ -1,5 +1,6 @@
 global _start
 _start:
+    ;; let
     mov rax, 2
     push rax
     mov rax, 3
@@ -10,7 +11,7 @@ _start:
     pop rbx
     mul rbx
     push rax
-    mov rax, 100
+    mov rax, 10
     push rax
     pop rax
     pop rbx
@@ -20,45 +21,47 @@ _start:
     pop rbx
     div rbx
     push rax
+    ;; /let
+    ;; let
     mov rax, 7
     push rax
-    mov rax, 8
-    push rax
-    mov rax, 5
-    push rax
+    ;; /let
+    ;; if
+    push QWORD [rsp + 0]
+    pop rax
+    test rax, rax
+    jz label0
     mov rax, 1
     push rax
-    mov rax, 5
-    push rax
-    push QWORD [rsp + 40]
-
     pop rax
-    pop rbx
-    add rax, rbx
-    push rax
-    pop rax
-    pop rbx
-    add rax, rbx
+    mov [rsp + 0], rax
+    jmp label1
+label0:
+    ;; elif
+    mov rax, 0
     push rax
     pop rax
-    pop rbx
-    add rax, rbx
+    test rax, rax
+    jz label2
+    mov rax, 2
     push rax
     pop rax
-    pop rbx
-    add rax, rbx
+    mov [rsp + 0], rax
+    jmp label1
+label2:
+    ;; else
+    mov rax, 3
     push rax
     pop rax
-    pop rbx
-    add rax, rbx
-    push rax
-    mov rax, 22
-    push rax
+    mov [rsp + 0], rax
+label1:
+    ;; /if
+    ;; exit
     push QWORD [rsp + 0]
-
     mov rax, 60
     pop rdi
     syscall
+    ;; /exit
     mov rax, 60
     mov rdi, 0
     syscall

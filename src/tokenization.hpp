@@ -5,7 +5,22 @@
 #include <optional>
 #include <iostream>
 
-enum class TokenType { exit, int_lit, semi, open_paren, close_paren, ident, set, eq, plus, star, sub, div, open_curl, close_curl,if_,elif,else_};
+enum class TokenType { exit, int_lit, semi, open_paren, close_paren, ident, set, eq, plus, star, sub, div, open_curl, close_curl,if_,elif,else_,for_,greater,lesser};
+
+
+inline std::ostream& operator<<(std::ostream& os, TokenType type) {
+    static const std::unordered_map<TokenType, std::string> token_type_strings = {
+            {TokenType::exit, "exit"}, {TokenType::int_lit, "int_lit"}, {TokenType::semi, "semi"},
+            {TokenType::open_paren, "open_paren"}, {TokenType::close_paren, "close_paren"},
+            {TokenType::ident, "ident"}, {TokenType::set, "set"}, {TokenType::eq, "eq"},
+            {TokenType::plus, "plus"}, {TokenType::star, "star"}, {TokenType::sub, "sub"},
+            {TokenType::div, "div"}, {TokenType::open_curl, "open_curl"}, {TokenType::close_curl, "close_curl"},
+            {TokenType::if_, "if"}, {TokenType::elif, "elif"}, {TokenType::else_, "else"},
+            {TokenType::for_, "for"}, {TokenType::greater, "greater"}, {TokenType::lesser, "lesser"}
+    };
+
+    return os << token_type_strings.at(type);
+}
 
 inline std::optional<int> bin_prec(const TokenType type)
 {
@@ -16,10 +31,12 @@ inline std::optional<int> bin_prec(const TokenType type)
         case TokenType::div:
         case TokenType::star:
             return 1;
+
         default:
             return {};
     }
 }
+
 
 struct Token {
     TokenType type;
@@ -63,6 +80,11 @@ public:
                 else if (buf == "else")
                 {
                     tokens.push_back({ .type = TokenType::else_ });
+                    buf.clear();
+                }
+                else if (buf == "for")
+                {
+                    tokens.push_back({ .type = TokenType::for_ });
                     buf.clear();
                 }
                 else {
@@ -111,6 +133,7 @@ public:
                 }
             }
 
+
             else if (peek().value() == '(') {
                 consume();
                 tokens.push_back({ .type = TokenType::open_paren });
@@ -150,6 +173,14 @@ public:
             else if (peek().value() == '}') {
                 consume();
                 tokens.push_back({ .type = TokenType::close_curl});
+            }
+            else if (peek().value() == '>') {
+                consume();
+                tokens.push_back({ .type = TokenType::greater});
+            }
+            else if (peek().value() == '<') {
+                consume();
+                tokens.push_back({ .type = TokenType::lesser});
             }
             else if (std::isspace(peek().value())) {
                 consume();

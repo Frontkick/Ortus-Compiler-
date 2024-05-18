@@ -37,7 +37,9 @@ int main(int argc, char* argv[])
         Generator generator(program.value());
         std::fstream file("out.asm", std::ios::out);
         file << generator.gen_prog();
+
     }
+
 
     system("nasm -felf64 out.asm");
     system("ld -o out out.o");

@@ -92,8 +92,36 @@ public:
             }
         };
 
+
+
         BinExprVisitor visitor { .gen = *this };
         std::visit(visitor, bin_expr->var);
+    }
+
+    void gen_bin_cond(const NodeBinCond* bin_cond)
+    {
+        struct BinExprVisitor {
+            Generator& gen;
+
+            void operator()(const NodeBinExprGreater* greater) const
+            {
+
+            }
+
+            void operator()(const NodeBinExprLesser* greater) const
+            {
+
+            }
+            void operator()(const NodeBinExprEqual* greater) const
+            {
+
+            }
+        };
+
+
+
+        BinExprVisitor visitor { .gen = *this };
+        std::visit(visitor, bin_cond->var);
     }
 
     void gen_expr(const NodeExpr* expr)
@@ -109,6 +137,11 @@ public:
             void operator()(const NodeBinExpr* bin_expr) const
             {
                 gen.gen_bin_expr(bin_expr);
+            }
+
+            void operator()(const NodeBinCond* bin_cond) const
+            {
+                gen.gen_bin_cond(bin_cond);
             }
         };
 
@@ -238,6 +271,10 @@ public:
 
                 }
                 gen.m_output << "    ;; /if\n";
+            }
+            void operator()(const NodeStmtFor* stmt_for) const
+            {
+
             }
         };
 

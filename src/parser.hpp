@@ -44,12 +44,30 @@ struct NodeBinExpr {
     std::variant<NodeBinExprAdd*, NodeBinExprMulti*, NodeBinExprSub*, NodeBinExprDiv*> var;
 };
 
+struct NodeBinExprGreater {
+    NodeExpr* lhs;
+    NodeExpr* rhs;
+};
+
+struct NodeBinExprLesser {
+    NodeExpr* lhs;
+    NodeExpr* rhs;
+};
+struct NodeBinExprEqual {
+    NodeExpr* lhs;
+    NodeExpr* rhs;
+};
+
+struct NodeBinCond {
+    std::variant<NodeBinExprGreater*, NodeBinExprLesser*, NodeBinExprEqual*> var;
+};
+
 struct NodeTerm {
     std::variant<NodeTermIntLit*, NodeTermIdent*, NodeTermParen*> var;
 };
 
 struct NodeExpr {
-    std::variant<NodeTerm*, NodeBinExpr*> var;
+    std::variant<NodeTerm*, NodeBinExpr*, NodeBinCond*> var;
 };
 
 struct NodeStmtExit {
@@ -93,9 +111,15 @@ struct NodeStmtAssign {
     Token ident;
     NodeExpr* expr{};
 };
+struct NodeStmtFor {
+    NodeTerm* init_stmt{};
+    NodeExpr* condition{};
+    NodeStmt* update_stmt{};
+    NodeScope* scope{};
+};
 
 struct NodeStmt {
-    std::variant<NodeStmtExit*, NodeStmtLet*, NodeScope*, NodeStmtIf*, NodeStmtAssign*> var;
+    std::variant<NodeStmtExit*, NodeStmtLet*, NodeScope*, NodeStmtIf*, NodeStmtAssign*, NodeStmtFor*> var;
 };
 
 struct NodeProg {
@@ -136,9 +160,54 @@ public:
         return {};
     }
 
+    std::optional<NodeExpr*> parse_cond()
+    {
+        if (auto term_lhs = parse_term()) {
+
+            auto expr_lhs = m_allocator.emplace<NodeExpr>(term_lhs.value());
+
+            std::optional<Token> curr_tok = peek();
+            if (curr_tok.has_value()) {
+                TokenType type = curr_tok->type;
+                if (type == TokenType::greater || type == TokenType::lesser) {
+                    consume(); // Consume the operator
+                    auto term_rhs = parse_term();
+                    if (term_rhs.has_value()) {
+                        auto expr_rhs = m_allocator.emplace<NodeExpr>(term_rhs.value());
+
+                        if (type == TokenType::greater) {
+                            auto bin_expr_greater = m_allocator.emplace<NodeBinExprGreater>(expr_lhs, expr_rhs);
+                            auto bin_cond = m_allocator.emplace<NodeBinCond>(bin_expr_greater);
+                            return m_allocator.emplace<NodeExpr>(bin_cond);
+
+                        } else if (type == TokenType::lesser) {
+                            auto bin_expr_lesser = m_allocator.emplace<NodeBinExprLesser>(expr_lhs, expr_rhs);
+                            auto bin_cond = m_allocator.emplace<NodeBinCond>(bin_expr_lesser);
+                            return m_allocator.emplace<NodeExpr>(bin_cond);
+                        }
+                    } else {
+                        std::cerr << "Invalid expression on the right-hand side" << std::endl;
+                        exit(EXIT_FAILURE);
+                    }
+                }
+            }
+
+            std::cerr << "Invalid condition" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        return {};
+    }
+
+
+
+
+
     std::optional<NodeExpr*> parse_expr(const int min_prec = 0) // NOLINT(*-no-recursion)
     {
         std::optional<NodeTerm*> term_lhs = parse_term();
+
+
         if (!term_lhs.has_value()) {
             return {};
         }
@@ -334,6 +403,74 @@ public:
             }
             stmt_if->pred = parse_if_pred();
             auto stmt = m_allocator.emplace<NodeStmt>(stmt_if);
+            return stmt;
+        }
+//        if(auto for_ = try_consume(TokenType::for_))
+//        {
+//            try_consume(TokenType::open_paren,"Expected '(");
+//            auto stmt_for = m_allocator.emplace<NodeStmtFor>();
+//            if(const auto expr = parse_term())
+//            {
+//                stmt_for->init_stmt = expr.value();
+//            }
+//            else {
+//                std::cerr << "Assign Identifier" << std::endl;
+//                exit(EXIT_FAILURE);
+//            }
+//
+//        }
+
+        if(auto for_ = try_consume(TokenType::for_))
+        {
+            try_consume(TokenType::open_paren,"Expected '('");
+            auto stmt_for = m_allocator.emplace<NodeStmtFor>();
+
+            // Parsing initialization statement
+            if(const auto init_expr = parse_term())
+            {
+                stmt_for->init_stmt = init_expr.value();
+            }
+            else {
+                std::cerr << "Expected initialization statement in for loop" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+
+            // Parsing condition expression
+            if(const auto condition_expr = parse_cond())
+            {
+                stmt_for->condition = condition_expr.value();
+            }
+            else {
+                std::cerr << "Expected condition expression in for loop" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+
+            try_consume(TokenType::semi, "Expected ';' after condition in for loop");
+
+            // Parsing update statement
+            if(const auto update_stmt = parse_stmt())
+            {
+                stmt_for->update_stmt = update_stmt.value();
+            }
+            else {
+                std::cerr << "Expected update statement in for loop" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+
+            try_consume(TokenType::close_paren, "Expected ')' after for loop clauses");
+
+            // Parsing the scope of the for loop
+            if(const auto scope = parse_scope())
+            {
+                stmt_for->scope = scope.value();
+            }
+            else {
+                std::cerr << "Invalid scope for for loop" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+
+            // Wrap NodeStmtFor in a NodeStmt
+            auto stmt = m_allocator.emplace<NodeStmt>(stmt_for);
             return stmt;
         }
         return {};

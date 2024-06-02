@@ -274,8 +274,9 @@ public:
             }
             void operator()(const NodeStmtFor* stmt_for) const
             {
-
+                gen.m_output <<"    test";
             }
+
         };
 
         StmtVisitor visitor { .gen = *this };
@@ -284,7 +285,10 @@ public:
 
     [[nodiscard]] std::string gen_prog()
     {
-        m_output << "global _start\n_start:\n";
+        m_output << "section .data\n";
+        m_output << "   result db '0', 0xA, 0xA  ; buffer to store the result with two newline characters\n";
+        m_output << "section .text\n";
+        m_output << "   global _start\n_start:\n";
 
         for (const NodeStmt* stmt : m_prog.stmts) {
             gen_stmt(stmt);

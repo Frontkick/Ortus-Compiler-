@@ -133,6 +133,11 @@ public:
             , m_allocator(1024 * 1024 * 4) // 4 mb
     {
     }
+    void error_expected(const std::string& msg) const
+    {
+        std::cerr << "[Parse Error] Expected " << msg << " on line " << peek(-1).value().line << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
     std::optional<NodeTerm*> parse_term() // NOLINT(*-no-recursion)
     {
@@ -160,43 +165,58 @@ public:
         return {};
     }
 
-    std::optional<NodeExpr*> parse_cond()
+    std::optional<NodeExpr*> parse_cond(const int min_prec = 0) // NOLINT(*-no-recursion)
     {
-        if (auto term_lhs = parse_term()) {
+        std::optional<NodeTerm*> term_lhs = parse_term();
 
-            auto expr_lhs = m_allocator.emplace<NodeExpr>(term_lhs.value());
 
+        if (!term_lhs.has_value()) {
+            return {};
+        }
+        auto expr_lhs = m_allocator.emplace<NodeExpr>(term_lhs.value());
+
+        while (true) {
             std::optional<Token> curr_tok = peek();
+            std::optional<int> prec;
             if (curr_tok.has_value()) {
-                TokenType type = curr_tok->type;
-                if (type == TokenType::greater || type == TokenType::lesser) {
-                    consume(); // Consume the operator
-                    auto term_rhs = parse_term();
-                    if (term_rhs.has_value()) {
-                        auto expr_rhs = m_allocator.emplace<NodeExpr>(term_rhs.value());
-
-                        if (type == TokenType::greater) {
-                            auto bin_expr_greater = m_allocator.emplace<NodeBinExprGreater>(expr_lhs, expr_rhs);
-                            auto bin_cond = m_allocator.emplace<NodeBinCond>(bin_expr_greater);
-                            return m_allocator.emplace<NodeExpr>(bin_cond);
-
-                        } else if (type == TokenType::lesser) {
-                            auto bin_expr_lesser = m_allocator.emplace<NodeBinExprLesser>(expr_lhs, expr_rhs);
-                            auto bin_cond = m_allocator.emplace<NodeBinCond>(bin_expr_lesser);
-                            return m_allocator.emplace<NodeExpr>(bin_cond);
-                        }
-                    } else {
-                        std::cerr << "Invalid expression on the right-hand side" << std::endl;
-                        exit(EXIT_FAILURE);
-                    }
+                prec = bin_prec_con(curr_tok->type);
+                if (!prec.has_value() || prec < min_prec) {
+                    break;
                 }
             }
-
-            std::cerr << "Invalid condition" << std::endl;
-            exit(EXIT_FAILURE);
+            else {
+                break;
+            }
+            const auto [type, line,value] = consume();
+            const int next_min_prec = prec.value() + 1;
+            auto expr_rhs = parse_expr(next_min_prec);
+            if (!expr_rhs.has_value()) {
+                std::cerr << "Unable to parse expression" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+            auto expr = m_allocator.emplace<NodeBinCond>();
+            auto expr_lhs2 = m_allocator.emplace<NodeExpr>();
+            if (type == TokenType::greater) {
+                expr_lhs2->var = expr_lhs->var;
+                auto add = m_allocator.emplace<NodeBinExprGreater>(expr_lhs2, expr_rhs.value());
+                expr->var = add;
+            }
+            else if (type == TokenType::lesser) {
+                expr_lhs2->var = expr_lhs->var;
+                auto multi = m_allocator.emplace<NodeBinExprLesser>(expr_lhs2, expr_rhs.value());
+                expr->var = multi;
+            }
+            else if (type == TokenType::eq) {
+                expr_lhs2->var = expr_lhs->var;
+                auto sub = m_allocator.emplace<NodeBinExprEqual>(expr_lhs2, expr_rhs.value());
+                expr->var = sub;
+            }
+            else {
+                assert(false); // Unreachable;
+            }
+            expr_lhs->var = expr;
         }
-
-        return {};
+        return expr_lhs;
     }
 
 
@@ -225,7 +245,7 @@ public:
             else {
                 break;
             }
-            const auto [type, value] = consume();
+            const auto [type,line,value] = consume();
             const int next_min_prec = prec.value() + 1;
             auto expr_rhs = parse_expr(next_min_prec);
             if (!expr_rhs.has_value()) {
@@ -405,20 +425,7 @@ public:
             auto stmt = m_allocator.emplace<NodeStmt>(stmt_if);
             return stmt;
         }
-//        if(auto for_ = try_consume(TokenType::for_))
-//        {
-//            try_consume(TokenType::open_paren,"Expected '(");
-//            auto stmt_for = m_allocator.emplace<NodeStmtFor>();
-//            if(const auto expr = parse_term())
-//            {
-//                stmt_for->init_stmt = expr.value();
-//            }
-//            else {
-//                std::cerr << "Assign Identifier" << std::endl;
-//                exit(EXIT_FAILURE);
-//            }
-//
-//        }
+
 
         if(auto for_ = try_consume(TokenType::for_))
         {
@@ -429,11 +436,19 @@ public:
             if(const auto init_expr = parse_term())
             {
                 stmt_for->init_stmt = init_expr.value();
+//                if (stmt_for->init_stmt) {
+//                    if (auto init_ident = std::get_if<NodeTermIdent*>(&stmt_for->init_stmt->var)) {
+//                        if ((*init_ident)->ident.value.has_value()) {
+//                            std::cout << "For loop init statement: " << (*init_ident)->ident.value.value() << std::endl;
+//                        }
+//                    }
+//                }
             }
             else {
                 std::cerr << "Expected initialization statement in for loop" << std::endl;
                 exit(EXIT_FAILURE);
             }
+            try_consume(TokenType::semi, "Expected ';' after initialization in for loop");
 
             // Parsing condition expression
             if(const auto condition_expr = parse_cond())

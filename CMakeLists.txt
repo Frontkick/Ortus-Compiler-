@@ -4,4 +4,5 @@ project(ortus)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(ortus src/main.cpp)
+add_executable(ortus src/main.cpp
+)

@@ -1,43 +1,15 @@
-global _start
+section .data
+   result db '0', 0xA, 0xA  ; buffer to store the result with two newline characters
+section .text
+   global _start
 _start:
     ;; let
-    ;; /let
-    ;; let
-    mov rax, 7
-    push rax
-    ;; /let
-    ;; if
-    push QWORD [rsp + 0]
-    pop rax
-    test rax, rax
-    jz label0
-    mov rax, 1
-    push rax
-    pop rax
-    mov [rsp + 0], rax
-    jmp label1
-label0:
-    ;; elif
     mov rax, 0
     push rax
-    pop rax
-    test rax, rax
-    jz label2
-    mov rax, 2
-    push rax
-    pop rax
-    mov [rsp + 0], rax
-    jmp label1
-label2:
-    ;; else
-    mov rax, 3
-    push rax
-    pop rax
-    mov [rsp + 0], rax
-label1:
-    ;; /if
+    ;; /let
     ;; exit
-    push QWORD [rsp + 0]
+    mov rax, 56
+    push rax
     mov rax, 60
     pop rdi
     syscall

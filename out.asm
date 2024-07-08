@@ -4,12 +4,11 @@ section .text
    global _start
 _start:
     ;; let
-    mov rax, 0
+    mov rax, 100
     push rax
     ;; /let
     ;; exit
-    mov rax, 56
-    push rax
+    push QWORD [rsp + 0]
     mov rax, 60
     pop rdi
     syscall

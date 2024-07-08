@@ -1,3 +1,2 @@
-set i =0;
-
-exit(56);
+set x= 100;
+exit(x);
